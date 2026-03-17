@@ -394,14 +394,9 @@
                     
                     <div class="form-group">
                         <label>Photos (up to 3)</label>
-<<<<<<< HEAD
-                        <input type="file" id="photos" multiple accept="image/*">
-                        <small style="color: #666; font-size: 12px;">Select up to 3 photos to upload with your catch</small>
-                        <div id="photo-preview" style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; min-height: 60px;"></div>
-=======
+
                         <input type="file" id="photos" multiple accept="image/*" max="3">
                         <small style="color: #666; font-size: 12px;">Select up to 3 photos to upload with your catch</small>
->>>>>>> f57bb7c7b12cc75c8acbec4e4f8807a07e58cb5c
                     </div>
                     
                     <button type="submit" class="btn">🎣 Log Catch</button>
@@ -661,20 +656,11 @@
                 // Build photo gallery HTML
                 let photoGallery = '';
                 if (catch_.photos && catch_.photos.length > 0) {
-<<<<<<< HEAD
-                    photoGallery = '<div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">';
-                    catch_.photos.forEach((photoUrl, index) => {
-                        photoGallery += `
-                            <div style="position: relative; width: 70px; height: 70px; border-radius: 8px; overflow: hidden; border: 2px solid #667eea; cursor: pointer;" onclick="window.open('${photoUrl}', '_blank')">
-                                <img src="${photoUrl}" style="width: 100%; height: 100%; object-fit: cover;" alt="Catch photo ${index + 1}">
-                                <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; font-size: 10px; text-align: center; padding: 2px;">Photo ${index + 1}</div>
-                            </div>
-=======
+
                     photoGallery = '<div style="display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap;">';
                     catch_.photos.forEach((photoUrl, index) => {
                         photoGallery += `
                             <img src="${photoUrl}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 5px; border: 2px solid #667eea;" alt="Catch photo ${index + 1}">
->>>>>>> f57bb7c7b12cc75c8acbec4e4f8807a07e58cb5c
                         `;
                     });
                     photoGallery += '</div>';
@@ -689,11 +675,7 @@
                             📍 ${catch_.location || 'Unknown'} | 
                             🎣 ${catch_.bait || 'N/A'}
                         </div>
-<<<<<<< HEAD
-                        ${catch_.notes ? `<div style="margin-top: 5px; font-size: 14px; color: #555;">${catch_.notes}</div>` : ''}
-=======
                         ${catch_.notes ? `<div style="margin-top: 5px; font-size: 14px;">${catch_.notes}</div>` : ''}
->>>>>>> f57bb7c7b12cc75c8acbec4e4f8807a07e58cb5c
                         ${photoGallery}
                     </div>
                     <div class="catch-stats">
