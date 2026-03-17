@@ -394,9 +394,9 @@
                     
                     <div class="form-group">
                         <label>Photos (up to 3)</label>
-
-                        <input type="file" id="photos" multiple accept="image/*" max="3">
+                        <input type="file" id="photos" multiple accept="image/*">
                         <small style="color: #666; font-size: 12px;">Select up to 3 photos to upload with your catch</small>
+                        <div id="photo-preview" style="display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; min-height: 80px;"></div>
                     </div>
                     
                     <button type="submit" class="btn">🎣 Log Catch</button>
@@ -477,6 +477,14 @@
                         <label>Structure/Notes</label>
                         <textarea id="spot-notes" placeholder="Describe the structure, obstacles, etc."></textarea>
                     </div>
+                    
+                    <div class="form-group">
+                        <label>Photos (up to 3)</label>
+                        <input type="file" id="spot-photos" multiple accept="image/*">
+                        <small style="color: #666; font-size: 12px;">Select up to 3 photos to upload with your spot</small>
+                        <div id="spot-photo-preview" style="display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; min-height: 80px;"></div>
+                    </div>
+                    
                     <button type="submit" class="btn">📍 Save Spot</button>
                 </form>
             </div>
@@ -493,7 +501,7 @@
         document.getElementById('date').valueAsDate = new Date();
         document.getElementById('time').value = new Date().toTimeString().slice(0,5);
         
-        // Photo preview functionality
+        // Photo preview functionality for catches
         const photoInput = document.getElementById('photos');
         const photoPreview = document.getElementById('photo-preview');
         
@@ -512,12 +520,117 @@
                         const imgContainer = document.createElement('div');
                         imgContainer.style.cssText = `
                             position: relative;
+                            width: 100px;
+                            height: 100px;
+                            border-radius: 12px;
+                            overflow: hidden;
+                            border: 3px solid #667eea;
+                            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                            transition: transform 0.2s, box-shadow 0.2s;
+                        `;
+                        
+                        imgContainer.onmouseover = function() {
+                            this.style.transform = 'scale(1.05)';
+                            this.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.5)';
+                        };
+                        
+                        imgContainer.onmouseout = function() {
+                            this.style.transform = 'scale(1)';
+                            this.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
+                        };
+                        
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.style.cssText = `
+                            width: 100%;
+                            height: 100%;
+                            object-fit: cover;
+                        `;
+                        
+                        const removeBtn = document.createElement('button');
+                        removeBtn.textContent = '×';
+                        removeBtn.style.cssText = `
+                            position: absolute;
+                            top: 4px;
+                            right: 4px;
+                            background: rgba(255, 0, 0, 0.9);
+                            color: white;
+                            border: none;
+                            border-radius: 50%;
+                            width: 24px;
+                            height: 24px;
+                            font-size: 16px;
+                            font-weight: bold;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            transition: background 0.2s;
+                        `;
+                        
+                        removeBtn.onmouseover = function() {
+                            this.style.background = 'rgba(255, 0, 0, 1)';
+                        };
+                        
+                        removeBtn.onmouseout = function() {
+                            this.style.background = 'rgba(255, 0, 0, 0.9)';
+                        };
+                        
+                        removeBtn.onclick = function(e) {
+                            e.stopPropagation();
+                            imgContainer.remove();
+                            // Update files list
+                            const newFiles = Array.from(files).filter(f => f !== file);
+                            const dt = new DataTransfer();
+                            newFiles.forEach(f => dt.items.add(f));
+                            photoInput.files = dt.files;
+                        };
+                        
+                        imgContainer.appendChild(img);
+                        imgContainer.appendChild(removeBtn);
+                        photoPreview.appendChild(imgContainer);
+                    };
+                    
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+        
+        // Photo preview functionality for spots
+        const spotPhotoInput = document.getElementById('spot-photos');
+        const spotPhotoPreview = document.getElementById('spot-photo-preview');
+        
+        spotPhotoInput.addEventListener('change', function() {
+            const files = this.files;
+            spotPhotoPreview.innerHTML = '';
+            
+            if (files.length > 0) {
+                const maxPhotos = Math.min(files.length, 3);
+                
+                for (let i = 0; i < maxPhotos; i++) {
+                    const file = files[i];
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(e) {
+                        const imgContainer = document.createElement('div');
+                        imgContainer.style.cssText = `
+                            position: relative;
                             width: 80px;
                             height: 80px;
-                            border-radius: 8px;
+                            border-radius: 10px;
                             overflow: hidden;
-                            border: 2px solid #667eea;
+                            border: 2px solid #764ba2;
+                            box-shadow: 0 3px 10px rgba(118, 75, 162, 0.3);
+                            transition: transform 0.2s;
                         `;
+                        
+                        imgContainer.onmouseover = function() {
+                            this.style.transform = 'scale(1.1)';
+                        };
+                        
+                        imgContainer.onmouseout = function() {
+                            this.style.transform = 'scale(1)';
+                        };
                         
                         const img = document.createElement('img');
                         img.src = e.target.result;
@@ -546,16 +659,18 @@
                             justify-content: center;
                         `;
                         
-                        removeBtn.onclick = function() {
+                        removeBtn.onclick = function(e) {
+                            e.stopPropagation();
                             imgContainer.remove();
-                            // Update files list
                             const newFiles = Array.from(files).filter(f => f !== file);
-                            photoInput.files = newFiles.length > 0 ? new DataTransfer().files : [];
+                            const dt = new DataTransfer();
+                            newFiles.forEach(f => dt.items.add(f));
+                            spotPhotoInput.files = dt.files;
                         };
                         
                         imgContainer.appendChild(img);
                         imgContainer.appendChild(removeBtn);
-                        photoPreview.appendChild(imgContainer);
+                        spotPhotoPreview.appendChild(imgContainer);
                     };
                     
                     reader.readAsDataURL(file);
@@ -656,11 +771,13 @@
                 // Build photo gallery HTML
                 let photoGallery = '';
                 if (catch_.photos && catch_.photos.length > 0) {
-
-                    photoGallery = '<div style="display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap;">';
+                    photoGallery = '<div style="display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap;">';
                     catch_.photos.forEach((photoUrl, index) => {
                         photoGallery += `
-                            <img src="${photoUrl}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 5px; border: 2px solid #667eea;" alt="Catch photo ${index + 1}">
+                            <div style="position: relative; width: 90px; height: 90px; border-radius: 12px; overflow: hidden; border: 3px solid #667eea; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onclick="window.open('${photoUrl}', '_blank')">
+                                <img src="${photoUrl}" style="width: 100%; height: 100%; object-fit: cover;" alt="Catch photo ${index + 1}">
+                                <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); color: white; font-size: 11px; text-align: center; padding: 8px 4px;">Photo ${index + 1}</div>
+                            </div>
                         `;
                     });
                     photoGallery += '</div>';
@@ -675,7 +792,7 @@
                             📍 ${catch_.location || 'Unknown'} | 
                             🎣 ${catch_.bait || 'N/A'}
                         </div>
-                        ${catch_.notes ? `<div style="margin-top: 5px; font-size: 14px;">${catch_.notes}</div>` : ''}
+                        ${catch_.notes ? `<div style="margin-top: 5px; font-size: 14px; color: #555;">${catch_.notes}</div>` : ''}
                         ${photoGallery}
                     </div>
                     <div class="catch-stats">
@@ -761,8 +878,39 @@
             });
             
             if (response.ok) {
-                alert('📍 Spot saved successfully!');
+                const result = await response.json();
+                const spotId = result.id;
+                
+                // Upload photos if any were selected
+                const photoInput = document.getElementById('spot-photos');
+                if (photoInput.files.length > 0) {
+                    const formData = new FormData();
+                    for (let i = 0; i < photoInput.files.length; i++) {
+                        formData.append('photos', photoInput.files[i]);
+                    }
+                    
+                    try {
+                        const photoResponse = await fetch(`/api/spots/${spotId}/photos`, {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        if (photoResponse.ok) {
+                            alert('📍 Spot saved successfully with photos!');
+                        } else {
+                            const errorData = await photoResponse.json();
+                            alert(`📍 Spot saved successfully! (Photo upload failed: ${errorData.message})`);
+                        }
+                    } catch (error) {
+                        alert('📍 Spot saved successfully! (Photo upload failed)');
+                    }
+                } else {
+                    alert('📍 Spot saved successfully!');
+                }
+                
                 document.getElementById('spot-form').reset();
+                document.getElementById('spot-photos').value = '';
+                spotPhotoPreview.innerHTML = '';
                 loadSpots();
             }
         });
@@ -783,6 +931,22 @@
             spots.forEach(spot => {
                 const card = document.createElement('div');
                 card.className = 'spot-card';
+                
+                // Build photo gallery HTML
+                let photoGallery = '';
+                if (spot.photos && spot.photos.length > 0) {
+                    photoGallery = '<div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">';
+                    spot.photos.forEach((photoUrl, index) => {
+                        photoGallery += `
+                            <div style="position: relative; width: 70px; height: 70px; border-radius: 10px; overflow: hidden; border: 2px solid #764ba2; box-shadow: 0 3px 10px rgba(118, 75, 162, 0.3); cursor: pointer; transition: transform 0.2s;" onclick="window.open('${photoUrl}', '_blank')">
+                                <img src="${photoUrl}" style="width: 100%; height: 100%; object-fit: cover;" alt="Spot photo ${index + 1}">
+                                <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: white; font-size: 10px; text-align: center; padding: 4px;">Photo ${index + 1}</div>
+                            </div>
+                        `;
+                    });
+                    photoGallery += '</div>';
+                }
+                
                 card.innerHTML = `
                     <h3>${spot.name}</h3>
                     <div class="rating">${'⭐'.repeat(spot.rating || 0)}</div>
@@ -790,6 +954,7 @@
                         ${spot.depth ? `Depth: ${spot.depth}m<br>` : ''}
                         ${spot.water_clarity ? `Clarity: ${spot.water_clarity}<br>` : ''}
                         ${spot.notes ? `<div style="margin-top: 5px;">${spot.notes}</div>` : ''}
+                        ${photoGallery}
                     </div>
                 `;
                 list.appendChild(card);

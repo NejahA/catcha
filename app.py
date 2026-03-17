@@ -275,6 +275,53 @@ def spots():
         
         return jsonify(spots)
 
+@app.route('/api/spots/<spot_id>/photos', methods=['POST'])
+@login_required
+def upload_spot_photos(spot_id):
+    if 'photos' not in request.files:
+        return jsonify({'success': False, 'message': 'No photos provided'}), 400
+
+    photos = request.files.getlist('photos')
+
+    if len(photos) > 3:
+        return jsonify({'success': False, 'message': 'Maximum 3 photos allowed'}), 400
+
+    # Validate each photo
+    for photo in photos:
+        if photo.filename == '':
+            continue
+        if not photo.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
+            return jsonify({'success': False, 'message': 'Invalid file type. Only images are allowed.'}), 400
+
+    # Store photos in filesystem
+    spot = spots_collection.find_one({'_id': ObjectId(spot_id), 'user_id': current_user.id})
+    if not spot:
+        return jsonify({'success': False, 'message': 'Spot not found'}), 404
+
+    # Store photo metadata in the database
+    photo_urls = []
+    upload_dir = os.path.join('static', 'spot_uploads', spot_id)
+    os.makedirs(upload_dir, exist_ok=True)
+
+    for i, photo in enumerate(photos):
+        if photo.filename == '':
+            continue
+
+        # Generate unique filename
+        filename = f'photo_{i+1}_{datetime.utcnow().timestamp()}.{photo.filename.split(".")[-1]}'
+        filepath = os.path.join(upload_dir, filename)
+        photo.save(filepath)
+
+        photo_urls.append(f'/static/spot_uploads/{spot_id}/{filename}')
+
+    # Update spot document with photo URLs
+    spots_collection.update_one(
+        {'_id': ObjectId(spot_id)},
+        {'$set': {'photos': photo_urls}}
+    )
+
+    return jsonify({'success': True, 'photos': photo_urls})
+
 @app.route('/api/weather')
 @login_required
 def get_weather():
