@@ -392,6 +392,12 @@
                         <textarea id="notes" placeholder="Add any additional notes about this catch..."></textarea>
                     </div>
                     
+                    <div class="form-group">
+                        <label>Photos (up to 3)</label>
+                        <input type="file" id="photos" multiple accept="image/*" max="3">
+                        <small style="color: #666; font-size: 12px;">Select up to 3 photos to upload with your catch</small>
+                    </div>
+                    
                     <button type="submit" class="btn">🎣 Log Catch</button>
                 </form>
             </div>
@@ -522,10 +528,40 @@
             });
             
             if (response.ok) {
-                alert('🎣 Catch logged successfully!');
+                const result = await response.json();
+                const catchId = result.id;
+                
+                // Upload photos if any were selected
+                const photoInput = document.getElementById('photos');
+                if (photoInput.files.length > 0) {
+                    const formData = new FormData();
+                    for (let i = 0; i < photoInput.files.length; i++) {
+                        formData.append('photos', photoInput.files[i]);
+                    }
+                    
+                    try {
+                        const photoResponse = await fetch(`/api/catches/${catchId}/photos`, {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        if (photoResponse.ok) {
+                            alert('🎣 Catch logged successfully with photos!');
+                        } else {
+                            const errorData = await photoResponse.json();
+                            alert(`🎣 Catch logged successfully! (Photo upload failed: ${errorData.message})`);
+                        }
+                    } catch (error) {
+                        alert('🎣 Catch logged successfully! (Photo upload failed)');
+                    }
+                } else {
+                    alert('🎣 Catch logged successfully!');
+                }
+                
                 document.getElementById('catch-form').reset();
                 document.getElementById('date').valueAsDate = new Date();
                 document.getElementById('time').value = new Date().toTimeString().slice(0,5);
+                document.getElementById('photos').value = '';
             }
         });
         
@@ -545,6 +581,19 @@
             catches.forEach(catch_ => {
                 const item = document.createElement('div');
                 item.className = 'catch-item';
+                
+                // Build photo gallery HTML
+                let photoGallery = '';
+                if (catch_.photos && catch_.photos.length > 0) {
+                    photoGallery = '<div style="display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap;">';
+                    catch_.photos.forEach((photoUrl, index) => {
+                        photoGallery += `
+                            <img src="${photoUrl}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 5px; border: 2px solid #667eea;" alt="Catch photo ${index + 1}">
+                        `;
+                    });
+                    photoGallery += '</div>';
+                }
+                
                 item.innerHTML = `
                     <div class="catch-icon">🐟</div>
                     <div class="catch-details">
@@ -555,6 +604,7 @@
                             🎣 ${catch_.bait || 'N/A'}
                         </div>
                         ${catch_.notes ? `<div style="margin-top: 5px; font-size: 14px;">${catch_.notes}</div>` : ''}
+                        ${photoGallery}
                     </div>
                     <div class="catch-stats">
                         ${catch_.weight ? `<div class="catch-weight">${catch_.weight} kg</div>` : ''}
