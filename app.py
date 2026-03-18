@@ -3,15 +3,17 @@ Catcha - Smart Fishing Logbook
 A comprehensive fishing journal with analytics and user authentication
 """
 
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_file
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from pymongo import MongoClient
 from bson.objectid import ObjectId
+from bson.binary import Binary
 import bcrypt
 from datetime import datetime
 import os
 from dotenv import load_dotenv
 import requests
+import io
 
 # Load environment variables
 load_dotenv()
@@ -30,6 +32,11 @@ db = client[DATABASE_NAME]
 users_collection = db['users']
 catches_collection = db['catches']
 spots_collection = db['spots']
+
+# GridFS for file storage
+from pymongo import MongoClient
+gridfs_catch = db.gridfs_catch
+gridfs_spot = db.gridfs_spot
 
 # Flask-Login setup
 login_manager = LoginManager()
@@ -165,26 +172,30 @@ def upload_photos(catch_id):
         if not photo.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
             return jsonify({'success': False, 'message': 'Invalid file type. Only images are allowed.'}), 400
 
-    # Store photos in filesystem
+    # Store photos in GridFS
     catch = catches_collection.find_one({'_id': ObjectId(catch_id), 'user_id': current_user.id})
     if not catch:
         return jsonify({'success': False, 'message': 'Catch not found'}), 404
 
     # Store photo metadata in the database
     photo_urls = []
-    upload_dir = os.path.join('static', 'uploads', catch_id)
-    os.makedirs(upload_dir, exist_ok=True)
-
+    
     for i, photo in enumerate(photos):
         if photo.filename == '':
             continue
 
-        # Generate unique filename
+        # Read file content
+        file_content = photo.read()
         filename = f'photo_{i+1}_{datetime.utcnow().timestamp()}.{photo.filename.split(".")[-1]}'
-        filepath = os.path.join(upload_dir, filename)
-        photo.save(filepath)
-
-        photo_urls.append(f'/static/uploads/{catch_id}/{filename}')
+        
+        # Store in GridFS
+        photo_id = gridfs_catch.put(
+            file_content,
+            filename=filename,
+            content_type=photo.content_type
+        )
+        
+        photo_urls.append(f'/api/catches/{catch_id}/photos/{photo_id}')
 
     # Update catch document with photo URLs
     catches_collection.update_one(
@@ -193,6 +204,29 @@ def upload_photos(catch_id):
     )
 
     return jsonify({'success': True, 'photos': photo_urls})
+
+@app.route('/api/catches/<catch_id>/photos/<photo_id>')
+@login_required
+def get_catch_photo(catch_id, photo_id):
+    """Retrieve a photo from GridFS"""
+    try:
+        photo = gridfs_catch.find_one({'_id': ObjectId(photo_id)})
+        if not photo:
+            return jsonify({'success': False, 'message': 'Photo not found'}), 404
+        
+        # Verify ownership
+        catch = catches_collection.find_one({'_id': ObjectId(catch_id), 'user_id': current_user.id})
+        if not catch:
+            return jsonify({'success': False, 'message': 'Catch not found'}), 404
+        
+        return send_file(
+            io.BytesIO(photo.read()),
+            mimetype=photo.content_type,
+            as_attachment=False,
+            download_name=photo.filename
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/analytics')
 @login_required
@@ -293,26 +327,30 @@ def upload_spot_photos(spot_id):
         if not photo.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
             return jsonify({'success': False, 'message': 'Invalid file type. Only images are allowed.'}), 400
 
-    # Store photos in filesystem
+    # Store photos in GridFS
     spot = spots_collection.find_one({'_id': ObjectId(spot_id), 'user_id': current_user.id})
     if not spot:
         return jsonify({'success': False, 'message': 'Spot not found'}), 404
 
     # Store photo metadata in the database
     photo_urls = []
-    upload_dir = os.path.join('static', 'spot_uploads', spot_id)
-    os.makedirs(upload_dir, exist_ok=True)
-
+    
     for i, photo in enumerate(photos):
         if photo.filename == '':
             continue
 
-        # Generate unique filename
+        # Read file content
+        file_content = photo.read()
         filename = f'photo_{i+1}_{datetime.utcnow().timestamp()}.{photo.filename.split(".")[-1]}'
-        filepath = os.path.join(upload_dir, filename)
-        photo.save(filepath)
-
-        photo_urls.append(f'/static/spot_uploads/{spot_id}/{filename}')
+        
+        # Store in GridFS
+        photo_id = gridfs_spot.put(
+            file_content,
+            filename=filename,
+            content_type=photo.content_type
+        )
+        
+        photo_urls.append(f'/api/spots/{spot_id}/photos/{photo_id}')
 
     # Update spot document with photo URLs
     spots_collection.update_one(
@@ -321,6 +359,29 @@ def upload_spot_photos(spot_id):
     )
 
     return jsonify({'success': True, 'photos': photo_urls})
+
+@app.route('/api/spots/<spot_id>/photos/<photo_id>')
+@login_required
+def get_spot_photo(spot_id, photo_id):
+    """Retrieve a photo from GridFS"""
+    try:
+        photo = gridfs_spot.find_one({'_id': ObjectId(photo_id)})
+        if not photo:
+            return jsonify({'success': False, 'message': 'Photo not found'}), 404
+        
+        # Verify ownership
+        spot = spots_collection.find_one({'_id': ObjectId(spot_id), 'user_id': current_user.id})
+        if not spot:
+            return jsonify({'success': False, 'message': 'Spot not found'}), 404
+        
+        return send_file(
+            io.BytesIO(photo.read()),
+            mimetype=photo.content_type,
+            as_attachment=False,
+            download_name=photo.filename
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/weather')
 @login_required
