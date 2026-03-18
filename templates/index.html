@@ -731,14 +731,16 @@
                             body: formData
                         });
                         
+                        const photoResult = await photoResponse.json();
                         if (photoResponse.ok) {
-                            alert('🎣 Catch logged successfully with photos!');
+                            console.log('Photos uploaded:', photoResult.photos);
+                            alert(`🎣 Catch logged successfully with ${photoResult.photos.length} photo(s)!`);
                         } else {
-                            const errorData = await photoResponse.json();
-                            alert(`🎣 Catch logged successfully! (Photo upload failed: ${errorData.message})`);
+                            alert(`🎣 Catch logged successfully! (Photo upload failed: ${photoResult.message || 'Unknown error'})`);
                         }
                     } catch (error) {
-                        alert('🎣 Catch logged successfully! (Photo upload failed)');
+                        console.error('Photo upload error:', error);
+                        alert(`🎣 Catch logged successfully! (Photo upload failed: ${error.message})`);
                     }
                 } else {
                     alert('🎣 Catch logged successfully!');
@@ -748,6 +750,13 @@
                 document.getElementById('date').valueAsDate = new Date();
                 document.getElementById('time').value = new Date().toTimeString().slice(0,5);
                 document.getElementById('photos').value = '';
+                document.getElementById('photo-preview').innerHTML = '';
+                
+                // Reload catches to show the new catch with photos
+                loadCatches();
+            } else {
+                const errorData = await response.json();
+                alert(`Failed to log catch: ${errorData.message || 'Unknown error'}`);
             }
         });
         
@@ -895,14 +904,16 @@
                             body: formData
                         });
                         
+                        const photoResult = await photoResponse.json();
                         if (photoResponse.ok) {
-                            alert('📍 Spot saved successfully with photos!');
+                            console.log('Spot photos uploaded:', photoResult.photos);
+                            alert(`📍 Spot saved successfully with ${photoResult.photos.length} photo(s)!`);
                         } else {
-                            const errorData = await photoResponse.json();
-                            alert(`📍 Spot saved successfully! (Photo upload failed: ${errorData.message})`);
+                            alert(`📍 Spot saved successfully! (Photo upload failed: ${photoResult.message || 'Unknown error'})`);
                         }
                     } catch (error) {
-                        alert('📍 Spot saved successfully! (Photo upload failed)');
+                        console.error('Spot photo upload error:', error);
+                        alert(`📍 Spot saved successfully! (Photo upload failed: ${error.message})`);
                     }
                 } else {
                     alert('📍 Spot saved successfully!');
@@ -911,7 +922,12 @@
                 document.getElementById('spot-form').reset();
                 document.getElementById('spot-photos').value = '';
                 spotPhotoPreview.innerHTML = '';
+                
+                // Reload spots to show the new spot with photos
                 loadSpots();
+            } else {
+                const errorData = await response.json();
+                alert(`Failed to save spot: ${errorData.message || 'Unknown error'}`);
             }
         });
         
